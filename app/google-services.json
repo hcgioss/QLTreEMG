@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "801927798713",
+    "project_id": "qltreemg",
+    "storage_bucket": "qltreemg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:801927798713:android:ed7ae1108c06e7cb196068",
+        "android_client_info": {
+          "package_name": "com.example.qltreem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgFAxxsa7JjbIhql0ew8DUagwjVR72Pzc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
