@@ -22,7 +22,11 @@ public class TaskListActivity extends AppCompatActivity {
 
     private LinearLayout layoutTaskContainer;
     private Button btnBack;
+
     private DatabaseReference mTasksDatabase;
+    private DatabaseReference mStarsDatabase;
+
+    private int currentTotalStars = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,76 +36,95 @@ public class TaskListActivity extends AppCompatActivity {
         layoutTaskContainer = findViewById(R.id.layoutTaskContainer);
         btnBack = findViewById(R.id.btnBack);
 
-        // Kết nối vào thư mục Tasks trên Firebase
         mTasksDatabase = FirebaseDatabase.getInstance().getReference().child("Tasks");
+        mStarsDatabase = FirebaseDatabase.getInstance().getReference().child("TotalStars");
 
-        // Lắng nghe dữ liệu tải về
+        mStarsDatabase.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    currentTotalStars = snapshot.getValue(Integer.class);
+                }
+            }
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {}
+        });
+
         mTasksDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // Xóa danh sách cũ đi để vẽ lại
                 layoutTaskContainer.removeAllViews();
 
                 for (DataSnapshot taskSnapshot : snapshot.getChildren()) {
                     try {
-                        // 1. LẤY DỮ LIỆU SIÊU AN TOÀN (Bất chấp là Số hay Chữ)
-                        String name = "Nhiệm vụ không tên";
-                        if (taskSnapshot.child("name").getValue() != null) {
-                            name = String.valueOf(taskSnapshot.child("name").getValue());
-                        }
+                        String name = String.valueOf(taskSnapshot.child("name").getValue());
+                        String rewardStr = String.valueOf(taskSnapshot.child("reward").getValue());
+                        String status = String.valueOf(taskSnapshot.child("status").getValue());
 
-                        String reward = "0";
-                        if (taskSnapshot.child("reward").getValue() != null) {
-                            reward = String.valueOf(taskSnapshot.child("reward").getValue());
-                        }
-
-                        String status = "assigned";
-                        if (taskSnapshot.child("status").getValue() != null) {
-                            status = String.valueOf(taskSnapshot.child("status").getValue());
-                        }
-
-                        // 2. Bơm khuôn giao diện thẻ vào
                         View taskView = LayoutInflater.from(TaskListActivity.this).inflate(R.layout.item_task_card, null);
 
-                        // 3. Ánh xạ các chữ bên trong thẻ
                         TextView tvName = taskView.findViewById(R.id.tvTaskName);
                         TextView tvReward = taskView.findViewById(R.id.tvTaskReward);
                         TextView tvStatus = taskView.findViewById(R.id.tvTaskStatus);
 
-                        // 4. Đổ dữ liệu vào thẻ
-                        tvName.setText(name);
-                        tvReward.setText("⭐ " + reward);
+                        // Ánh xạ cụm nút
+                        LinearLayout layoutActionButtons = taskView.findViewById(R.id.layoutActionButtons);
+                        Button btnApprove = taskView.findViewById(R.id.btnApprove);
+                        Button btnReject = taskView.findViewById(R.id.btnReject);
 
+                        tvName.setText(name);
+                        tvReward.setText("⭐ " + rewardStr);
+
+                        // XỬ LÝ HIỂN THỊ
                         if ("assigned".equals(status)) {
-                            tvStatus.setText("Trạng thái: Chưa làm");
-                            tvStatus.setTextColor(Color.parseColor("#E67E22")); // Màu cam
-                        } else {
-                            tvStatus.setText("Trạng thái: Đã hoàn thành");
-                            tvStatus.setTextColor(Color.parseColor("#27AE60")); // Màu xanh lá
+                            tvStatus.setText("Trạng thái: Đang chờ bé làm");
+                            tvStatus.setTextColor(Color.parseColor("#E67E22"));
+                            layoutActionButtons.setVisibility(View.GONE); // Ẩn nút
+
+                        } else if ("pending".equals(status)) {
+                            tvStatus.setText("Trạng thái: Bé báo xong. Hãy kiểm tra!");
+                            tvStatus.setTextColor(Color.parseColor("#E74C3C"));
+                            layoutActionButtons.setVisibility(View.VISIBLE); // HIỆN CỤM 2 NÚT
+
+                        } else if ("completed".equals(status)) {
+                            tvStatus.setText("Trạng thái: Đã duyệt & Cộng sao");
+                            tvStatus.setTextColor(Color.parseColor("#27AE60"));
+                            layoutActionButtons.setVisibility(View.GONE); // Ẩn nút
                         }
 
-                        // 5. Nhét thẻ vào màn hình
+                        // SỰ KIỆN 1: BẤM DUYỆT (TẶNG SAO)
+                        btnApprove.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                int rewardValue = Integer.parseInt(rewardStr);
+                                int newTotal = currentTotalStars + rewardValue;
+                                mStarsDatabase.setValue(newTotal);
+                                taskSnapshot.getRef().child("status").setValue("completed");
+                                Toast.makeText(TaskListActivity.this, "Đã cộng " + rewardValue + " Sao cho bé!", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+
+                        // SỰ KIỆN 2: BẤM TỪ CHỐI (BẮT LÀM LẠI)
+                        btnReject.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                // Đẩy trạng thái về lại ban đầu
+                                taskSnapshot.getRef().child("status").setValue("assigned");
+                                Toast.makeText(TaskListActivity.this, "Đã yêu cầu bé làm lại!", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+
                         layoutTaskContainer.addView(taskView);
 
                     } catch (Exception e) {
-                        // Nếu có lỗi ở 1 nhiệm vụ nào đó, bỏ qua để KHÔNG BỊ CRASH APP
                         e.printStackTrace();
                     }
                 }
             }
-
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(TaskListActivity.this, "Lỗi mạng!", Toast.LENGTH_SHORT).show();
-            }
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
 
-        // Nút Đóng
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        btnBack.setOnClickListener(v -> finish());
     }
 }

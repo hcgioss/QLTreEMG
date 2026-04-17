@@ -119,7 +119,17 @@
         android:backgroundTint="#FFFFFF"
         app:cornerRadius="8dp"
         android:layout_marginBottom="16dp"/>
-
+    <Button
+        android:id="@+id/btnViewRewards"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="🎁 LỊCH SỬ CON ĐỔI QUÀ"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#9B59B6"
+        app:cornerRadius="12dp"
+        android:layout_marginBottom="12dp"/>
     <Button
         android:id="@+id/btnBack"
         android:layout_width="match_parent"

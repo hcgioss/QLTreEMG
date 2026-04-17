@@ -1,15 +1,16 @@
 package com.example.qltreem;
 
-import android.content.DialogInterface;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.cardview.widget.CardView;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -20,11 +21,15 @@ import com.google.firebase.database.ValueEventListener;
 public class VideoStoreActivity extends AppCompatActivity {
 
     private TextView tvStoreStars;
-    private CardView cardVideo1, cardVideo2;
+    private LinearLayout layoutRewardsContainer;
+    private Button btnStoreBack;
 
-    // Khai báo biến Firebase
-    private DatabaseReference mDatabase;
-    private int currentStars = 0; // Số sao sẽ được tự động tải từ mạng về thay vì gán cứng 150
+    private DatabaseReference mStarsDatabase;
+    private int currentTotalStars = 0; // Biến lưu Ví tiền của bé
+
+    // TẠO MENU QUÀ TẶNG (Tên quà và Giá tiền)
+    private String[] rewardNames = {"Xem 1 tập phim Hoạt hình", "Chơi iPad 30 phút", "Đi chơi Công viên", "Ăn gà rán KFC"};
+    private int[] rewardPrices = {30, 50, 100, 150};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,69 +37,86 @@ public class VideoStoreActivity extends AppCompatActivity {
         setContentView(R.layout.activity_video_store);
 
         tvStoreStars = findViewById(R.id.tvStoreStars);
-        cardVideo1 = findViewById(R.id.cardVideo1);
-        cardVideo2 = findViewById(R.id.cardVideo2);
+        layoutRewardsContainer = findViewById(R.id.layoutRewardsContainer);
+        btnStoreBack = findViewById(R.id.btnStoreBack);
 
-        // KẾT NỐI FIREBASE - Trỏ thẳng vào Ví tiền chung
-        mDatabase = FirebaseDatabase.getInstance().getReference().child("TotalStars");
+        // KẾT NỐI VÀO VÍ TIỀN TRÊN FIREBASE
+        mStarsDatabase = FirebaseDatabase.getInstance().getReference().child("TotalStars");
 
-        // 1. LẮNG NGHE SỐ DƯ TỪ MÂY
-        mDatabase.addValueEventListener(new ValueEventListener() {
+        // 1. LUÔN CẬP NHẬT SỐ DƯ
+        mStarsDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    // Lấy số dư hiện tại trên mạng về và hiển thị
-                    currentStars = snapshot.getValue(Integer.class);
-                    tvStoreStars.setText("⭐ " + currentStars);
+                    currentTotalStars = snapshot.getValue(Integer.class);
+                    tvStoreStars.setText("⭐ " + currentTotalStars);
                 }
             }
-
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(VideoStoreActivity.this, "Lỗi mạng!", Toast.LENGTH_SHORT).show();
-            }
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
 
-        // 2. Xử lý khi bé bấm vào Video 1 (Giá 50 Sao)
-        cardVideo1.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkAndBuyVideo("Hoạt hình Gấu", 50);
-            }
-        });
+        // 2. BÀY BÁN CÁC MÓN QUÀ LÊN KỆ
+        for (int i = 0; i < rewardNames.length; i++) {
+            final String name = rewardNames[i];
+            final int price = rewardPrices[i];
 
-        // 3. Xử lý khi bé bấm vào Video 2 (Giá 200 Sao)
-        cardVideo2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                checkAndBuyVideo("Siêu nhân nhện", 200);
-            }
-        });
-    }
+            // Bơm khuôn thẻ vào
+            View rewardView = LayoutInflater.from(this).inflate(R.layout.item_reward_card, null);
 
-    // Hàm kiểm tra tiền và hỏi xác nhận mua
-    private void checkAndBuyVideo(String videoName, int price) {
-        if (currentStars >= price) {
-            // ĐỦ TIỀN: Hiện hộp thoại hỏi bé có chắc chắn mua không
-            new AlertDialog.Builder(this)
-                    .setTitle("Mở khóa Video")
-                    .setMessage("Bé có muốn dùng " + price + " Sao để xem phim '" + videoName + "' không?")
-                    .setPositiveButton("Đồng ý", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
+            TextView tvName = rewardView.findViewById(R.id.tvRewardName);
+            TextView tvPrice = rewardView.findViewById(R.id.tvRewardPrice);
+            Button btnBuy = rewardView.findViewById(R.id.btnBuyReward);
 
-                            // PHÉP MÀU: Tính số sao mới và ghi thẳng lên Firebase
-                            int newStars = currentStars - price;
-                            mDatabase.setValue(newStars);
+            tvName.setText(name);
+            tvPrice.setText("Giá: " + price + " Sao");
 
-                            Toast.makeText(VideoStoreActivity.this, "Đang mở phim! Chúc bé xem vui vẻ", Toast.LENGTH_LONG).show();
-                        }
-                    })
-                    .setNegativeButton("Hủy", null)
-                    .show();
-        } else {
-            // KHÔNG ĐỦ TIỀN: Báo lỗi
-            Toast.makeText(this, "Bé chưa đủ Sao rồi! Hãy làm thêm nhiệm vụ nhé.", Toast.LENGTH_LONG).show();
+            // SỰ KIỆN: KHI BÉ BẤM NÚT "ĐỔI QUÀ"
+            btnBuy.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    // Kiểm tra xem ví có đủ tiền không?
+                    if (currentTotalStars >= price) {
+                        // Hiện Popup hỏi lại cho chắc chắn
+                        new AlertDialog.Builder(VideoStoreActivity.this)
+                                .setTitle("Xác nhận đổi quà")
+                                .setMessage("Con có muốn dùng " + price + " Sao để đổi lấy: " + name + " không?")
+                                .setPositiveButton("Đổi luôn!", (dialog, which) -> {
+
+                                    // BƯỚC 1: Trừ tiền ví của bé và cập nhật lên mạng
+                                    int newTotal = currentTotalStars - price;
+                                    mStarsDatabase.setValue(newTotal);
+
+                                    // BƯỚC 2: TẠO "HÓA ĐƠN" LƯU LỊCH SỬ ĐỔI QUÀ ĐỂ BỐ MẸ KIỂM TRA
+                                    DatabaseReference mRewardHistory = FirebaseDatabase.getInstance().getReference().child("RewardRequests");
+                                    String requestId = mRewardHistory.push().getKey(); // Tạo mã hóa đơn ngẫu nhiên
+
+                                    if (requestId != null) {
+                                        mRewardHistory.child(requestId).child("name").setValue(name);
+                                        mRewardHistory.child(requestId).child("price").setValue(price);
+                                        mRewardHistory.child(requestId).child("status").setValue("Chờ bố mẹ trao quà");
+
+                                        // DÒNG ĐƯỢC THÊM: Lưu thời gian đổi quà của bé
+                                        String currentTime = new java.text.SimpleDateFormat("HH:mm - dd/MM/yyyy", java.util.Locale.getDefault()).format(new java.util.Date());
+                                        mRewardHistory.child(requestId).child("time").setValue(currentTime);
+                                    }
+
+                                    Toast.makeText(VideoStoreActivity.this, "🎉 Chúc mừng! Con hãy báo Bố mẹ để nhận thưởng nhé!", Toast.LENGTH_LONG).show();
+                                })
+                                .setNegativeButton("Thôi", null)
+                                .show();
+                    } else {
+                        // Thiếu tiền -> Báo lỗi
+                        Toast.makeText(VideoStoreActivity.this, "😢 Con chưa đủ Sao rồi. Cố gắng làm thêm nhiệm vụ nhé!", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+
+            // Nhét thẻ lên màn hình
+            layoutRewardsContainer.addView(rewardView);
         }
+
+        // Nút Quay lại
+        btnStoreBack.setOnClickListener(v -> finish());
     }
 }
