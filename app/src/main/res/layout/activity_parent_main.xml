@@ -119,6 +119,7 @@
         android:backgroundTint="#FFFFFF"
         app:cornerRadius="8dp"
         android:layout_marginBottom="16dp"/>
+
     <Button
         android:id="@+id/btnViewRewards"
         android:layout_width="match_parent"
@@ -130,6 +131,20 @@
         android:backgroundTint="#9B59B6"
         app:cornerRadius="12dp"
         android:layout_marginBottom="12dp"/>
+
+    <!-- TÍNH NĂNG MỚI: NÚT CÀI ĐẶT THỜI GIAN -->
+    <Button
+        android:id="@+id/btnSetTimeLimit"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="⚙️ CÀI ĐẶT THỜI GIAN DÙNG APP"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#27AE60"
+        app:cornerRadius="12dp"
+        android:layout_marginBottom="12dp"/>
+
     <Button
         android:id="@+id/btnBack"
         android:layout_width="match_parent"
