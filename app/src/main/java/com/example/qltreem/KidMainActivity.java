@@ -9,7 +9,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
-import android.os.CountDownTimer; // IMPORT THÊM CHO ĐẾM NGƯỢC
+import android.os.CountDownTimer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -18,7 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog; // IMPORT THÊM CHO HỘP THOẠI
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.firebase.database.DataSnapshot;
@@ -33,15 +33,14 @@ public class KidMainActivity extends AppCompatActivity implements SensorEventLis
     private LinearLayout layoutKidTasks;
     private Button btnKidBack, btnGoToStore;
 
-    // THÊM BIẾN mSessionRef ĐỂ LẤY THỜI GIAN TỪ FIREBASE
     private DatabaseReference mDatabase, mTasksDatabase, mSessionRef;
 
-    // KHAI BÁO BIẾN CHO SENSORS
+    // Sensor
     private SensorManager sensorManager;
     private Sensor lightSensor;
     private Sensor proximitySensor;
 
-    // KHAI BÁO BIẾN CHO TÍNH NĂNG GIỚI HẠN THỜI GIAN
+    // Timer
     private CountDownTimer sessionTimer;
 
     @Override
@@ -49,190 +48,370 @@ public class KidMainActivity extends AppCompatActivity implements SensorEventLis
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_kid_main);
 
-        // Ánh xạ View
+        // Ánh xạ view
         tvKidStars = findViewById(R.id.tvKidStars);
         layoutKidTasks = findViewById(R.id.layoutKidTasks);
         btnKidBack = findViewById(R.id.btnKidBack);
         btnGoToStore = findViewById(R.id.btnGoToStore);
 
-        // 1. KẾT NỐI FIREBASE
-        mDatabase = FirebaseDatabase.getInstance().getReference().child("TotalStars");
-        mTasksDatabase = FirebaseDatabase.getInstance().getReference().child("Tasks");
-        // KẾT NỐI NHÁNH CẤU HÌNH THỜI GIAN
-        mSessionRef = FirebaseDatabase.getInstance().getReference().child("SessionTimeLimit");
+        // Firebase
+        mDatabase = FirebaseDatabase.getInstance()
+                .getReference()
+                .child("TotalStars");
 
-        // =========================================================================
-        // TÍNH NĂNG MỚI: LẤY THỜI GIAN PHỤ HUYNH CÀI ĐẶT TỪ FIREBASE (TÍNH BẰNG PHÚT)
-        // =========================================================================
+        mTasksDatabase = FirebaseDatabase.getInstance()
+                .getReference()
+                .child("Tasks");
+
+        mSessionRef = FirebaseDatabase.getInstance()
+                .getReference()
+                .child("SessionTimeLimit");
+
+        // ====================================================
+        // LẤY THỜI GIAN GIỚI HẠN TỪ FIREBASE
+        // ====================================================
+
         mSessionRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                long timeInMillis = 15 * 1000; // Mặc định là 15 phút nếu Bố mẹ chưa cài
+
+                long timeInMillis = 15 * 60 * 1000L;
+
                 if (snapshot.exists()) {
+
                     Integer minutes = snapshot.getValue(Integer.class);
+
                     if (minutes != null) {
-                        timeInMillis = minutes* 1000L; // Đổi từ phút sang mili-giây
+                        timeInMillis = minutes * 60 * 1000L;
                     }
                 }
-                startSessionTimer(timeInMillis); // Gọi hàm bắt đầu đếm ngược
+
+                startSessionTimer(timeInMillis);
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                // Lỗi mạng thì cho mặc định 15 phút
-                startSessionTimer(15 * 60 * 1000);
+
+                startSessionTimer(15 * 60 * 1000L);
             }
         });
 
-        // 2. LOAD SỐ SAO (Giữ nguyên)
+        // ====================================================
+        // LOAD SAO
+        // ====================================================
+
         mDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+
                 if (snapshot.exists()) {
-                    tvKidStars.setText("⭐ " + snapshot.getValue(Integer.class));
+
+                    Integer stars = snapshot.getValue(Integer.class);
+
+                    if (stars != null) {
+                        tvKidStars.setText("⭐ " + stars);
+                    }
                 }
             }
+
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
         });
 
-        // 3. LOAD DANH SÁCH VIỆC (Giữ nguyên)
+        // ====================================================
+        // LOAD NHIỆM VỤ
+        // ====================================================
+
         mTasksDatabase.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
+
                 layoutKidTasks.removeAllViews();
+
+                // =====================================
+                // NÚT HỌC BÀI CỐ ĐỊNH
+                // =====================================
+
+                Button btnStudy = new Button(KidMainActivity.this);
+
+                btnStudy.setText("📚 HỌC BÀI 90 PHÚT (+50 ⭐)");
+                btnStudy.setTextSize(18);
+
+                btnStudy.setPadding(20, 20, 20, 20);
+
+                btnStudy.setBackgroundTintList(
+                        ColorStateList.valueOf(Color.parseColor("#3498DB"))
+                );
+
+                btnStudy.setTextColor(Color.WHITE);
+
+                btnStudy.setOnClickListener(v -> {
+
+                    Intent intent = new Intent(
+                            KidMainActivity.this,
+                            StudyModeActivity.class
+                    );
+
+                    startActivity(intent);
+                });
+
+                layoutKidTasks.addView(btnStudy);
+
+                // =====================================
+                // LOAD TASK TỪ FIREBASE
+                // =====================================
+
                 for (DataSnapshot taskSnap : snapshot.getChildren()) {
+
                     try {
-                        String status = String.valueOf(taskSnap.child("status").getValue());
-                        if ("assigned".equals(status) || "pending".equals(status)) {
+
+                        String status = String.valueOf(
+                                taskSnap.child("status").getValue()
+                        );
+
+                        if ("assigned".equals(status)
+                                || "pending".equals(status)) {
+
                             updateTaskListUI(taskSnap, status);
                         }
-                    } catch (Exception e) { e.printStackTrace(); }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
+
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {}
+            public void onCancelled(@NonNull DatabaseError error) {
+
+            }
         });
 
-        // 4. THIẾT LẬP CẢM BIẾN (Giữ nguyên)
+        // ====================================================
+        // SENSOR
+        // ====================================================
+
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
         if (sensorManager != null) {
+
             lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-            proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+
+            proximitySensor = sensorManager.getDefaultSensor(
+                    Sensor.TYPE_PROXIMITY
+            );
         }
 
-        // Báo lỗi nếu máy không có cảm biến
         if (lightSensor == null || proximitySensor == null) {
-            Toast.makeText(this, "Cảnh báo: Máy này thiếu cảm biến phần cứng!", Toast.LENGTH_SHORT).show();
+
+            Toast.makeText(
+                    this,
+                    "Máy thiếu cảm biến!",
+                    Toast.LENGTH_SHORT
+            ).show();
         }
 
-        // Các nút chuyển trang
-        btnGoToStore.setOnClickListener(v -> startActivity(new Intent(this, VideoStoreActivity.class)));
+        // ====================================================
+        // NÚT CHUYỂN TRANG
+        // ====================================================
+
+        btnGoToStore.setOnClickListener(v -> {
+
+            startActivity(
+                    new Intent(this, VideoStoreActivity.class)
+            );
+        });
+
         btnKidBack.setOnClickListener(v -> finish());
     }
 
-    // =========================================================================
-    // HÀM XỬ LÝ ĐẾM NGƯỢC GIỚI HẠN THỜI GIAN
-    // =========================================================================
+    // ====================================================
+    // TIMER GIỚI HẠN THỜI GIAN
+    // ====================================================
+
     private void startSessionTimer(long durationInMillis) {
+
         long minutes = durationInMillis / (60 * 1000);
-        Toast.makeText(this, "Phiên sử dụng của con là " + minutes + " phút nhé!", Toast.LENGTH_LONG).show();
+
+        Toast.makeText(
+                this,
+                "Con có " + minutes + " phút sử dụng app",
+                Toast.LENGTH_LONG
+        ).show();
 
         sessionTimer = new CountDownTimer(durationInMillis, 1000) {
+
             @Override
             public void onTick(long millisUntilFinished) {
-                // Không cần làm gì ở đây
+
             }
 
             @Override
             public void onFinish() {
-                // Khi hết giờ -> Khóa ứng dụng, bung Dialog báo lỗi
+
                 new AlertDialog.Builder(KidMainActivity.this)
-                        .setTitle("Hết giờ rồi con ơi! ⏰")
-                        .setMessage("Phiên sử dụng đã kết thúc để bảo vệ mắt cho con. Hãy nhờ Bố mẹ thiết lập lại thời gian nếu muốn dùng tiếp nhé!")
-                        .setCancelable(false) // Không cho bấm ra ngoài để thoát Popup
-                        .setPositiveButton("Dạ vâng", (dialog, which) -> {
-                            finish(); // Đá văng ra màn hình chọn vai trò
+                        .setTitle("⏰ Hết giờ rồi!")
+                        .setMessage("Con hãy nghỉ ngơi nhé!")
+                        .setCancelable(false)
+                        .setPositiveButton("Dạ", (dialog, which) -> {
+
+                            finish();
                         })
                         .show();
             }
         }.start();
     }
 
-    // NHỚ HỦY ĐẾM NGƯỢC KHI THOÁT APP ĐỂ KHÔNG LỖI BỘ NHỚ
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (sessionTimer != null) {
-            sessionTimer.cancel();
-        }
-    }
-    // =========================================================================
+    // ====================================================
+    // SENSOR CHANGED
+    // ====================================================
 
-    // HÀM XỬ LÝ KHI DỮ LIỆU CẢM BIẾN THAY ĐỔI (Giữ nguyên)
     @Override
     public void onSensorChanged(SensorEvent event) {
+
         if (event.sensor.getType() == Sensor.TYPE_LIGHT) {
+
             float lightLevel = event.values[0];
+
             if (lightLevel < 10) {
-                Toast.makeText(this, "🌙 Trời tối quá! Con hãy bật đèn để bảo vệ mắt nhé!", Toast.LENGTH_SHORT).show();
+
+                Toast.makeText(
+                        this,
+                        "🌙 Bật đèn lên nhé!",
+                        Toast.LENGTH_SHORT
+                ).show();
             }
         }
 
         if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+
             float distance = event.values[0];
-            if (distance < proximitySensor.getMaximumRange()) {
-                Toast.makeText(this, "🚫 Con đang để máy quá gần mắt! Hãy để xa ra nào!", Toast.LENGTH_LONG).show();
+
+            if (proximitySensor != null &&
+                    distance < proximitySensor.getMaximumRange()) {
+
+                Toast.makeText(
+                        this,
+                        "📱 Đừng để quá gần mắt!",
+                        Toast.LENGTH_SHORT
+                ).show();
             }
         }
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
 
     @Override
     protected void onResume() {
         super.onResume();
+
         if (lightSensor != null) {
-            sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL);
+
+            sensorManager.registerListener(
+                    this,
+                    lightSensor,
+                    SensorManager.SENSOR_DELAY_NORMAL
+            );
         }
+
         if (proximitySensor != null) {
-            sensorManager.registerListener(this, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL);
+
+            sensorManager.registerListener(
+                    this,
+                    proximitySensor,
+                    SensorManager.SENSOR_DELAY_NORMAL
+            );
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        sensorManager.unregisterListener(this);
+
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(this);
+        }
     }
 
-    // Hàm phụ trợ cập nhật danh sách việc (Giữ nguyên)
-    private void updateTaskListUI(DataSnapshot taskSnap, String status) {
-        String name = String.valueOf(taskSnap.child("name").getValue());
-        String reward = String.valueOf(taskSnap.child("reward").getValue());
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
 
-        View taskView = LayoutInflater.from(KidMainActivity.this).inflate(R.layout.item_task_kid, null);
+        if (sessionTimer != null) {
+            sessionTimer.cancel();
+        }
+    }
+
+    // ====================================================
+    // HIỂN THỊ TASK
+    // ====================================================
+
+    private void updateTaskListUI(DataSnapshot taskSnap, String status) {
+
+        String name = String.valueOf(
+                taskSnap.child("name").getValue()
+        );
+
+        String reward = String.valueOf(
+                taskSnap.child("reward").getValue()
+        );
+
+        View taskView = LayoutInflater.from(this)
+                .inflate(R.layout.item_task_kid, null);
+
         TextView tvName = taskView.findViewById(R.id.tvKidTaskName);
+
         TextView tvReward = taskView.findViewById(R.id.tvKidTaskReward);
+
         Button btnDone = taskView.findViewById(R.id.btnDone);
 
         tvName.setText(name);
+
         tvReward.setText("Thưởng: " + reward + " Sao");
 
         if ("assigned".equals(status)) {
+
             btnDone.setText("XONG!");
+
             btnDone.setEnabled(true);
-            btnDone.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#4CAF50")));
+
+            btnDone.setBackgroundTintList(
+                    ColorStateList.valueOf(
+                            Color.parseColor("#4CAF50")
+                    )
+            );
+
             btnDone.setOnClickListener(v -> {
-                taskSnap.getRef().child("status").setValue("pending");
-                Toast.makeText(KidMainActivity.this, "Đã gửi! Chờ bố mẹ duyệt nhé!", Toast.LENGTH_SHORT).show();
+
+                taskSnap.getRef()
+                        .child("status")
+                        .setValue("pending");
+
+                Toast.makeText(
+                        this,
+                        "Đã gửi chờ duyệt!",
+                        Toast.LENGTH_SHORT
+                ).show();
             });
+
         } else {
+
             btnDone.setText("⏳ CHỜ DUYỆT");
+
             btnDone.setEnabled(false);
-            btnDone.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#95A5A6")));
+
+            btnDone.setBackgroundTintList(
+                    ColorStateList.valueOf(
+                            Color.parseColor("#95A5A6")
+                    )
+            );
         }
+
         layoutKidTasks.addView(taskView);
     }
 }

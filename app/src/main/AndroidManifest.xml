@@ -51,6 +51,11 @@
             android:name=".TaskListActivity"
             android:exported="false" />
 
+        <!-- THÊM ĐOẠN NÀY -->
+        <activity
+            android:name=".StudyModeActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
